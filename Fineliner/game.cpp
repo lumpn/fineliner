@@ -176,8 +176,8 @@ static int random(int min, int max) {
 }
 
 int2 Game::GetRandomPosition() const {
-    int x = random(10, canvasWidth / 3 - 10);
-    int y = random(10, canvasHeight / 3 - 10);
+    int x = random(20, canvasWidth / 3 - 20);
+    int y = random(20, canvasHeight / 3 - 20);
     return int2(x, y);
 }
 

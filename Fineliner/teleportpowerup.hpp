@@ -17,7 +17,7 @@ class TeleportPowerUp: public PowerUp {
         virtual void OnTrigger(Snake* snake, Snake* other, Game* game);
 
     private:
-        static const int eraserRadius = 30;
+        static const int eraserRadius = 50;
 };
 
 #endif /* TELEPORT_POWERUP_HPP_ */

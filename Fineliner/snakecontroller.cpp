@@ -9,7 +9,6 @@ SnakeController::~SnakeController() {
 }
 
 void SnakeController::Update() {
-    snake->SetStepSize(defaultStepSize);
 }
 
 bool SnakeController::Steer(dir2 direction) {
@@ -31,7 +30,7 @@ bool SnakeController::Jump() {
     if (snake->GetEnergy() < jumpEnergy) {
         return false;
     }
-    snake->SetStepSize(jumpStepSize);
+    snake->Jump();
     snake->DecEnergy(jumpEnergy);
     return true;
 }

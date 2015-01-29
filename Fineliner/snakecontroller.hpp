@@ -21,9 +21,6 @@ class SnakeController {
     private:
         static const int steerEnergy = 10;
         static const int jumpEnergy = 60;
-
-        static const int defaultStepSize = 1;
-        static const int jumpStepSize = 10;
 };
 
 #endif /* SNAKECONTROLLER_HPP_ */
