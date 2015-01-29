@@ -10,6 +10,19 @@
 #include <cstdio>
 #include <cstdlib>
 
+const int Game::screenWidth = 680;
+const int Game::screenHeight = 520;
+const int Game::backgroundWidth = 680;
+const int Game::backgroundHeight = 520;
+const int Game::backgroundLeft = 0;
+const int Game::backgroundTop = 0;
+const int Game::canvasWidth = 640;
+const int Game::canvasHeight = 480;
+const int Game::canvasLeft = 20;
+const int Game::canvasTop = 20;
+const int Game::gridSize = 32;
+const char* Game::canvasBitmapPath = "canvas.bmp";
+
 Game::Game(HDC hDC) {
 
     srand(reinterpret_cast<unsigned int>(hDC));
@@ -32,24 +45,21 @@ Game::Game(HDC hDC) {
     buffer = new Texture(hDC, screenWidth, screenHeight);
     background = new Texture(hDC, backgroundWidth, backgroundHeight);
     canvas = new Texture(hDC, canvasWidth, canvasHeight);
+    overlay = new Texture(hDC, canvasWidth, canvasHeight);
 
-    brushes = new HBRUSH[5];
+    brushes = new HBRUSH[2];
     brushes[0] = CreateSolidBrush(RGB(0, 0, 255));
     brushes[1] = CreateSolidBrush(RGB(223, 0, 0));
-    brushes[2] = CreateSolidBrush(RGB(0, 191, 0));
-    brushes[3] = CreateSolidBrush(RGB(0, 0, 0));
-    brushes[4] = CreateSolidBrush(RGB(255, 255, 255));
 
+    active = false;
 }
 
 Game::~Game() {
-    DeleteObject(brushes[4]);
-    DeleteObject(brushes[3]);
-    DeleteObject(brushes[2]);
     DeleteObject(brushes[1]);
     DeleteObject(brushes[0]);
     delete[] brushes;
 
+    delete overlay;
     delete canvas;
     delete background;
     delete buffer;
@@ -69,27 +79,81 @@ void Game::Initialize() {
 
 void Game::Restart() {
     InitializeCanvas();
+    InitializeOverlay();
     InitializeSnakes();
     InitializePowerUps();
+    active = true;
+}
+
+void Game::Pause() {
+    active = !active;
 }
 
 void Game::InitializeBackground() {
+
     HDC hDC = background->GetDC();
+
+    // paper background
     for (int y = 0; y < backgroundHeight; y++) {
         for (int x = 0; x < backgroundWidth; x++) {
             int c = 255 - rand() % 13;
             SetPixel(hDC, x, y, RGB(c, c, c));
         }
     }
+
+    int canvasRight = canvasLeft + canvasWidth;
+    int canvasBottom = canvasTop + canvasHeight;
+
+    // math grid
+    HPEN gridPen = CreatePen(PS_SOLID, 1, RGB(191, 191, 191));
+    SelectObject(hDC, gridPen);
+    for (int y = canvasTop; y < canvasBottom; y += gridSize) {
+        MoveToEx(hDC, canvasLeft, y, NULL);
+        LineTo(hDC, canvasRight, y);
+    }
+    for (int x = canvasLeft; x < canvasRight; x += gridSize) {
+        MoveToEx(hDC, x, canvasTop, NULL);
+        LineTo(hDC, x, canvasBottom);
+    }
+
+    // canvas frame
+    HPEN framePen = CreatePen(PS_SOLID, 3, RGB(191, 191, 191));
+    SelectObject(hDC, GetStockObject(NULL_BRUSH));
+    SelectObject(hDC, framePen);
+    Rectangle(hDC, canvasLeft, canvasTop, canvasRight, canvasBottom);
+    DeleteObject(framePen);
 }
 
 void Game::InitializeCanvas() {
+
     HDC hDC = canvas->GetDC();
     RECT rect;
     SetRect(&rect, 0, 0, canvasWidth, canvasHeight);
-    FillRect(hDC, &rect, brushes[4]);
+    FillRect(hDC, &rect, (HBRUSH) GetStockObject(WHITE_BRUSH));
 
-    // TODO obstacles (load bitmap)
+    // obstacles bitmap
+    HBITMAP hBitmap = (HBITMAP) LoadImage(NULL, "canvas.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+    if (hBitmap) {
+
+        // get bitmap size
+        BITMAP bm;
+        GetObject(hBitmap, sizeof(bm), &bm);
+        int bmLeft = (canvasWidth - bm.bmWidth) / 2;
+        int bmTop = (canvasHeight - bm.bmHeight) / 2;
+
+        // render to center
+        HDC hBitmapDC = CreateCompatibleDC(hDC);
+        SelectObject(hBitmapDC, hBitmap);
+        BitBlt(hDC, bmLeft, bmTop, bm.bmWidth, bm.bmHeight, hBitmapDC, 0, 0, SRCCOPY);
+        DeleteDC(hBitmapDC);
+    }
+}
+
+void Game::InitializeOverlay() const {
+    HDC hDC = overlay->GetDC();
+    RECT rect;
+    SetRect(&rect, 0, 0, canvasWidth, canvasHeight);
+    FillRect(hDC, &rect, (HBRUSH) GetStockObject(WHITE_BRUSH));
 }
 
 void Game::InitializeSnakes() {
@@ -120,9 +184,12 @@ int2 Game::GetRandomPosition() const {
 void Game::Render(HDC hDC) const {
     RECT rect;
 
+    // clear overlay
+    InitializeOverlay();
+
     // erasers
     for (EraserVector::const_iterator it = erasers.begin(); it != erasers.end(); ++it) {
-        (*it)->Render(canvas, *this);
+        (*it)->Render(canvas, overlay, *this);
     }
 
     // render to canvas
@@ -135,6 +202,7 @@ void Game::Render(HDC hDC) const {
     // render to buffer
     BitBlt(buffer->GetDC(), backgroundLeft, backgroundTop, backgroundWidth, backgroundHeight, background->GetDC(), 0, 0, SRCCOPY);
     BitBlt(buffer->GetDC(), canvasLeft, canvasTop, canvasWidth, canvasWidth, canvas->GetDC(), 0, 0, SRCAND);
+    BitBlt(buffer->GetDC(), canvasLeft, canvasTop, canvasWidth, canvasWidth, overlay->GetDC(), 0, 0, SRCAND);
 
     // power ups
     for (int i = 0; i < 10; i++) {
@@ -158,7 +226,7 @@ void Game::Render(HDC hDC) const {
     char text[32];
     int num;
     num = snprintf(text, 32, "%d", snakes[0]->GetNumDeaths());
-    TextOut(buffer->GetDC(), canvasWidth, 5, text, num);
+    TextOut(buffer->GetDC(), screenWidth - 10, 5, text, num);
     num = snprintf(text, 32, "%d", snakes[1]->GetNumDeaths());
     TextOut(buffer->GetDC(), 10, 5, text, num);
 
@@ -167,6 +235,10 @@ void Game::Render(HDC hDC) const {
 }
 
 void Game::Update() {
+    if (!active) {
+        return;
+    }
+
     snakes[0]->Update(this);
     snakes[1]->Update(this);
     controllers[0]->Update();
@@ -231,8 +303,15 @@ void Game::Stop(int player) {
 }
 
 bool Game::IsCellFree(int2 cell) const {
+
+    // check canvas
     int2 pixel = Cell2Canvas(cell);
     COLORREF color = GetPixel(canvas->GetDC(), pixel.x, pixel.y);
+    if (color != RGB(255, 255, 255))
+        return false;
+
+    // check overlay
+    color = GetPixel(overlay->GetDC(), pixel.x, pixel.y);
     return (color == RGB(255, 255, 255));
 }
 

@@ -3,7 +3,7 @@
 #include "texture.hpp"
 
 Eraser::Eraser(int2 position_, int radius_)
-        : position(position_), radius(0), maxRadius(radius_) {
+        : position(position_), radius(5), maxRadius(radius_) {
 }
 
 Eraser::~Eraser() {
@@ -17,14 +17,20 @@ bool Eraser::IsActive() const {
     return radius < maxRadius;
 }
 
-void Eraser::Render(Texture* target, const Game& game) const {
+void Eraser::Render(Texture* canvas, Texture* overlay, const Game& game) const {
     int2 pos = game.Cell2Canvas(position);
 
-    //Ellipse(target->GetDC(), pos.x - radius, pos.y - radius, pos.x + radius, pos.y + radius);
+// erase canvas
+    HDC hDC = canvas->GetDC();
+    SelectObject(hDC, GetStockObject(WHITE_BRUSH));
+    SelectObject(hDC, GetStockObject(NULL_PEN));
+    Ellipse(hDC, pos.x - radius, pos.y - radius, pos.x + radius, pos.y + radius);
 
-    RECT rect;
-    HBRUSH brush = CreateSolidBrush(RGB(255, 255, 255));
-    SetRect(&rect, pos.x - radius, pos.y - radius, pos.x + radius, pos.y + radius);
-    FillRect(target->GetDC(), &rect, brush);
-    DeleteObject(brush);
+    // ring
+    hDC = overlay->GetDC();
+    HPEN pen = CreatePen(PS_SOLID, 6, RGB(128, 128, 128));
+    SelectObject(hDC, GetStockObject(WHITE_BRUSH));
+    SelectObject(hDC, pen);
+    Ellipse(hDC, pos.x - radius, pos.y - radius, pos.x + radius, pos.y + radius);
+    DeleteObject(pen);
 }

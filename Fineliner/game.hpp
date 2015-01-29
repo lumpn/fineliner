@@ -21,6 +21,7 @@ class Game {
 
         void Initialize();
         void Restart();
+        void Pause();
 
         void Render(HDC hDC) const;
         void Update();
@@ -50,6 +51,7 @@ class Game {
     private:
         void InitializeBackground();
         void InitializeCanvas();
+        void InitializeOverlay() const;
         void InitializeSnakes();
         void InitializePowerUps();
 
@@ -61,21 +63,25 @@ class Game {
         Texture* buffer;
         Texture* background;
         Texture* canvas;
+        Texture* overlay;
         HBRUSH* brushes;
         EffectVector effects;
         EraserVector erasers;
+        bool active;
 
     private:
-        static const int screenWidth = 640;
-        static const int screenHeight = 480;
-        static const int backgroundWidth = 640;
-        static const int backgroundHeight = 480;
-        static const int backgroundLeft = 0;
-        static const int backgroundTop = 0;
-        static const int canvasWidth = 600;
-        static const int canvasHeight = 400;
-        static const int canvasLeft = 20;
-        static const int canvasTop = 40;
+        static const int screenWidth;
+        static const int screenHeight;
+        static const int backgroundWidth;
+        static const int backgroundHeight;
+        static const int backgroundLeft;
+        static const int backgroundTop;
+        static const int canvasWidth;
+        static const int canvasHeight;
+        static const int canvasLeft;
+        static const int canvasTop;
+        static const int gridSize;
+        static const char* canvasBitmapPath;
 };
 
 #endif /* GAME_HPP_ */

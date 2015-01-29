@@ -16,7 +16,7 @@ class Eraser {
         void Update();
         bool IsActive() const;
 
-        void Render(Texture* target, const Game& game) const;
+        void Render(Texture* canvas, Texture* overlay, const Game& game) const;
 
     private:
         int2 position;

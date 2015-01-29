@@ -13,6 +13,8 @@ TeleportEffect::~TeleportEffect() {
 void TeleportEffect::Render(Texture* target, const Game& game) const {
     int2 p1 = game.Cell2Screen(pos1);
     int2 p2 = game.Cell2Screen(pos2);
+    HDC hDC = target->GetDC();
+    SelectObject(hDC, GetStockObject(BLACK_PEN));
     MoveToEx(target->GetDC(), p1.x, p1.y, NULL);
     LineTo(target->GetDC(), p2.x, p2.y);
 }
